@@ -150,6 +150,77 @@ app.get('/api/avatars/:id/preview', async (req, res) => {
   }
 });
 
+// ---- Conversational Avatar API (docs.kaltura.com/models) ----
+// Catalog listing + backend session creation per the recommended production
+// pattern: the KS never reaches the browser; the client gets only the
+// short-lived { sessionId, token } pair.
+
+const AVATAR_API_BASE = process.env.KALTURA_AVATAR_API || 'https://api.avatar.us.kaltura.ai';
+
+async function avatarApi(pathname, body, authHeader) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (authHeader) {
+    headers.Authorization = authHeader;
+  } else {
+    headers.Authorization = `ks ${await getKs()}`;
+  }
+  return fetch(`${AVATAR_API_BASE}${pathname}`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body ?? {}),
+  });
+}
+
+app.post('/api/catalog/list', async (req, res) => {
+  if (!hasCredentials()) {
+    res.status(501).json({ error: 'Kaltura credentials not configured in .env' });
+    return;
+  }
+  try {
+    const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    const type = body?.type === 'Voice' ? 'Voice' : 'Visual';
+    const upstream = await avatarApi('/v1/catalog-item/list', {
+      filter: { typeEqual: type },
+      pager: { offset: 0, limit: 100 },
+      orderBy: '-createdAt',
+    });
+    const text = await upstream.text();
+    res.status(upstream.status).type('application/json').send(text);
+  } catch (err) {
+    console.error('[avatar] catalog list failed:', err);
+    res.status(502).json({ error: 'Upstream request failed' });
+  }
+});
+
+app.post('/api/avatar-session/create', async (req, res) => {
+  if (!hasCredentials()) {
+    res.status(501).json({ error: 'Kaltura credentials not configured in .env' });
+    return;
+  }
+  try {
+    const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    const { visualId, voiceId, language } = body ?? {};
+    if (!visualId) {
+      res.status(400).json({ error: 'visualId is required' });
+      return;
+    }
+    const payload = {
+      clientId: 'kaltura-avatar-sdk',
+      visualConfig: { id: visualId },
+      ...(voiceId ? { voiceConfig: { id: voiceId, ...(language ? { language } : {}) } } : {}),
+    };
+    const upstream = await avatarApi('/v1/avatar-session/create', payload);
+    const text = await upstream.text();
+    if (!upstream.ok) {
+      console.error(`[avatar] session create -> ${upstream.status}: ${text.slice(0, 300)}`);
+    }
+    res.status(upstream.status).type('application/json').send(text);
+  } catch (err) {
+    console.error('[avatar] session create failed:', err);
+    res.status(502).json({ error: 'Upstream request failed' });
+  }
+});
+
 // Client streaming-log collector (batched fetch + sendBeacon on pagehide).
 app.post('/api/logs', (req, res) => {
   try {

@@ -15,8 +15,20 @@ npm run dev            # web on :5173, API proxy on :8787
 
 ## What's inside
 
-### Demo page
-Two panels against the same published avatar flow:
+### Demo page — Conversational API (primary)
+The real-time avatar per the official docs (`@unisphere/models-sdk-js`):
+
+- Pick a **visual** (36 in the account catalog) and a **voice** (10, with samples)
+- The backend creates the session (`POST /v1/avatar-session/create`, KS never
+  reaches the browser) and hands `{ sessionId, token }` to the SDK
+- WebRTC video attaches automatically; `sayText` / `interrupt` / `endSession`
+  controls, with every SDK event logged to the event console and the logger
+
+No Client ID / Flow ID needed — authentication is the Kaltura Session minted
+server-side from the partner credentials.
+
+### Demo page — Embed SDK (secondary tab)
+Two panels against the same Studio-published avatar flow:
 
 - **Socket SDK** — Socket.IO control plane + WebRTC/WHEP media. Full event stream,
   typed errors, mic control, `sendText`, DPP injection on `ready`.
@@ -35,7 +47,12 @@ exact same adapter + logging pipeline — including on-demand error simulation
 > script URLs only need changing for a custom deployment.
 
 ### Admin panel
-- **Conversational flows** — registry of your published flows (there is no public
+- **Avatar catalog** — live `catalog-item/list` of the Conversational API: every
+  visual with its attributes (gender presentation, age group, skin tone, hair,
+  clothing, glasses, background) and thumbnail, every voice with description,
+  language, and playable sample; "Use in demo" wires the selection into the
+  live panel.
+- **Embed-SDK flows** — registry of Studio-published flows (there is no public
   list endpoint for flows; they live in Kaltura Studio).
 - **SDK settings** — every documented constructor option per flow: connection/reconnect,
   media & mic constraints, GenUI, endpoint & TURN overrides, Iframe SDK config, and a
@@ -47,6 +64,9 @@ exact same adapter + logging pipeline — including on-demand error simulation
 ### Server proxy (`server/index.mjs`)
 Keeps Kaltura credentials out of the browser:
 
+- `POST /api/catalog/list` → `catalog-item/list` (visuals / voices)
+- `POST /api/avatar-session/create` → `avatar-session/create` (returns
+  `{ sessionId, token }` for the SDK's `initSession`)
 - `POST /api/avatars/templates` → `avatarTemplate/list`
 - `POST /api/avatars/upsert` → `avatar/upsert`
 - `GET  /api/avatars/:id/preview` → `avatar/preview` (PNG)

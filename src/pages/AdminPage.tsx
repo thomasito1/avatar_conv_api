@@ -2,6 +2,7 @@ import { useState } from 'react';
 import FlowRegistry from '../components/admin/FlowRegistry';
 import SdkSettingsForm from '../components/admin/SdkSettingsForm';
 import AvatarGallery from '../components/admin/AvatarGallery';
+import CatalogGallery from '../components/admin/CatalogGallery';
 import type { FlowConfig } from '../sdk/types';
 
 interface Props {
@@ -11,10 +12,10 @@ interface Props {
   setActive: (id: string) => void;
 }
 
-type Tab = 'flows' | 'settings' | 'gallery';
+type Tab = 'catalog' | 'flows' | 'settings' | 'gallery';
 
 export default function AdminPage({ flows, setFlows, activeId, setActive }: Props) {
-  const [tab, setTab] = useState<Tab>('flows');
+  const [tab, setTab] = useState<Tab>('catalog');
   const active = flows.find((f) => f.id === activeId) ?? flows[0];
 
   const updateActive = (next: FlowConfig) => {
@@ -24,8 +25,11 @@ export default function AdminPage({ flows, setFlows, activeId, setActive }: Prop
   return (
     <main className="admin">
       <nav className="admin-tabs">
+        <button className={tab === 'catalog' ? 'active' : ''} onClick={() => setTab('catalog')}>
+          Avatar catalog (visuals & voices)
+        </button>
         <button className={tab === 'flows' ? 'active' : ''} onClick={() => setTab('flows')}>
-          Conversational flows
+          Embed-SDK flows
         </button>
         <button className={tab === 'settings' ? 'active' : ''} onClick={() => setTab('settings')}>
           SDK settings — {active.label}
@@ -34,6 +38,7 @@ export default function AdminPage({ flows, setFlows, activeId, setActive }: Prop
           VOD avatar templates
         </button>
       </nav>
+      {tab === 'catalog' && <CatalogGallery />}
       {tab === 'flows' && (
         <FlowRegistry flows={flows} setFlows={setFlows} activeId={activeId} setActive={setActive} />
       )}
