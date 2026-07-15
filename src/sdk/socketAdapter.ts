@@ -59,12 +59,10 @@ export class SocketAdapter implements AvatarAdapter {
   constructor(private flow: FlowConfig) {}
 
   async connect(container: HTMLElement): Promise<void> {
-    if (!this.flow.sdkScriptUrl || !this.flow.sdkGlobalName) {
-      throw new Error(
-        'Socket SDK script URL / global name not configured for this flow. Set them in the admin panel (from the Kaltura Studio embed snippet), or use mock mode.'
-      );
+    if (!this.flow.socketSdk.scriptUrl || !this.flow.socketSdk.globalName) {
+      throw new Error('Socket SDK script URL / global name not configured for this flow.');
     }
-    const globalValue = await loadSdkScript(this.flow.sdkScriptUrl, this.flow.sdkGlobalName);
+    const globalValue = await loadSdkScript(this.flow.socketSdk.scriptUrl, this.flow.socketSdk.globalName);
     const Ctor = globalValue as SdkConstructor;
     const s = this.flow.socketSettings;
     this.sdk = new Ctor({

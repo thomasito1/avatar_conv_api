@@ -115,8 +115,10 @@ export default function AvatarPanel({ flow, panelMode }: Props) {
   const connect = async () => {
     if (!containerRef.current || adapterRef.current) return;
     let adapter: AvatarAdapter;
-    const hasSdk = flow.sdkScriptUrl && flow.sdkGlobalName && flow.clientId && flow.flowId;
-    if (hasSdk) {
+    // SDK script URLs default to the official jsDelivr builds, so live mode
+    // only needs the flow's credentials.
+    const hasCredentials = flow.clientId && flow.flowId;
+    if (hasCredentials) {
       adapter = panelMode === 'socket' ? new SocketAdapter(flow) : new IframeAdapter(flow);
       setUsingMock(false);
     } else {
@@ -124,7 +126,7 @@ export default function AvatarPanel({ flow, panelMode }: Props) {
       setUsingMock(true);
       logger.log({
         level: 'info', source: 'app', event: 'mock-fallback',
-        message: `${panelMode} panel using mock adapter (SDK script or credentials missing)`,
+        message: `${panelMode} panel using mock adapter (Client ID / Flow ID missing)`,
         flowId: flow.flowId,
       });
     }

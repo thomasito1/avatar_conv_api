@@ -43,12 +43,10 @@ export class IframeAdapter implements AvatarAdapter {
   constructor(private flow: FlowConfig) {}
 
   async connect(container: HTMLElement): Promise<void> {
-    if (!this.flow.sdkScriptUrl || !this.flow.sdkGlobalName) {
-      throw new Error(
-        'Iframe SDK script URL / global name not configured for this flow. Set them in the admin panel, or use mock mode.'
-      );
+    if (!this.flow.iframeSdk.scriptUrl || !this.flow.iframeSdk.globalName) {
+      throw new Error('Iframe SDK script URL / global name not configured for this flow.');
     }
-    const globalValue = await loadSdkScript(this.flow.sdkScriptUrl, this.flow.sdkGlobalName);
+    const globalValue = await loadSdkScript(this.flow.iframeSdk.scriptUrl, this.flow.iframeSdk.globalName);
     const Ctor = globalValue as SdkConstructor;
     const s = this.flow.iframeSettings;
     this.sdk = new Ctor({

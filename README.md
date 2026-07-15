@@ -23,14 +23,16 @@ Two panels against the same published avatar flow:
 - **Iframe SDK** — sandboxed embed, coarse postMessage events, DPP injection on
   `showing-agent` (+500ms per the docs).
 
-Until a flow has its Client ID / Flow ID / SDK script URL configured, panels run a
-**mock adapter** that simulates the documented lifecycle, transcript, and error codes
-through the exact same adapter + logging pipeline — including on-demand error
-simulation (1003, 2004, 4002, 5003).
+Until a flow has its Client ID / Flow ID configured, panels run a **mock adapter**
+that simulates the documented lifecycle, transcript, and error codes through the
+exact same adapter + logging pipeline — including on-demand error simulation
+(1003, 2004, 4002, 5003).
 
-> **SDK script**: the SDK is loaded at runtime from the script URL shown in your
-> Kaltura Studio embed snippet. Paste that URL and the global name it exposes into
-> the flow's registry entry in the admin panel.
+> **SDK scripts** default to the official embed SDK builds
+> (`github.com/kaltura/conversational-avatar-embed-sdk` via jsDelivr, pinned
+> `@2.7.4`; both UMD bundles expose `window.KalturaAvatarSDK`). Paste a flow's
+> Client ID + Flow ID in the admin panel and the demo panels go live — the
+> script URLs only need changing for a custom deployment.
 
 ### Admin panel
 - **Conversational flows** — registry of your published flows (there is no public

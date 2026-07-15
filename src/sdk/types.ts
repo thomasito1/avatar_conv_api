@@ -132,6 +132,20 @@ export const DEFAULT_IFRAME_SETTINGS: IframeSdkSettings = {
   iframeClass: 'avatar-iframe',
 };
 
+// Official embed SDK builds (github.com/kaltura/conversational-avatar-embed-sdk
+// via jsDelivr), pinned for reproducibility. Both UMD bundles register the
+// same global, KalturaAvatarSDK.
+export const SDK_GLOBAL_NAME = 'KalturaAvatarSDK';
+export const SOCKET_SDK_URL =
+  'https://cdn.jsdelivr.net/gh/kaltura/conversational-avatar-embed-sdk@2.7.4/sdk-socket/dist/kaltura-avatar-sdk.js';
+export const IFRAME_SDK_URL =
+  'https://cdn.jsdelivr.net/gh/kaltura/conversational-avatar-embed-sdk@2.7.4/sdk-iframe/kaltura-avatar-sdk.min.js';
+
+export interface SdkScriptConfig {
+  scriptUrl: string;
+  globalName: string;
+}
+
 // A conversational avatar "flow" as published in Kaltura Studio. There is no
 // public list endpoint for flows, so the admin panel maintains this registry.
 export interface FlowConfig {
@@ -139,10 +153,8 @@ export interface FlowConfig {
   label: string;
   clientId: string;
   flowId: string;
-  // Optional URL of the SDK script and the global it exposes; filled in once
-  // known from the Kaltura Studio embed snippet.
-  sdkScriptUrl: string;
-  sdkGlobalName: string;
+  socketSdk: SdkScriptConfig;
+  iframeSdk: SdkScriptConfig;
   dpp: string; // Dynamic Page Prompt JSON injected on `ready`
   socketSettings: SocketSdkSettings;
   iframeSettings: IframeSdkSettings;

@@ -1,6 +1,9 @@
 import {
   DEFAULT_IFRAME_SETTINGS,
   DEFAULT_SOCKET_SETTINGS,
+  IFRAME_SDK_URL,
+  SDK_GLOBAL_NAME,
+  SOCKET_SDK_URL,
   type FlowConfig,
 } from '../sdk/types';
 
@@ -48,8 +51,8 @@ export function makeDefaultFlow(partial?: Partial<FlowConfig>): FlowConfig {
     label: 'My avatar flow',
     clientId: '',
     flowId: '',
-    sdkScriptUrl: '',
-    sdkGlobalName: '',
+    socketSdk: { scriptUrl: SOCKET_SDK_URL, globalName: SDK_GLOBAL_NAME },
+    iframeSdk: { scriptUrl: IFRAME_SDK_URL, globalName: SDK_GLOBAL_NAME },
     dpp: SAMPLE_DPP,
     socketSettings: structuredClone(DEFAULT_SOCKET_SETTINGS),
     iframeSettings: structuredClone(DEFAULT_IFRAME_SETTINGS),
@@ -57,12 +60,27 @@ export function makeDefaultFlow(partial?: Partial<FlowConfig>): FlowConfig {
   };
 }
 
+// Flows stored by an older build may predate the per-mode SDK script config;
+// merge them over fresh defaults so new fields are always present.
+function normalizeFlow(stored: Partial<FlowConfig> & { id?: string }): FlowConfig {
+  const base = makeDefaultFlow();
+  return {
+    ...base,
+    ...stored,
+    id: stored.id ?? base.id,
+    socketSdk: { ...base.socketSdk, ...(stored.socketSdk ?? {}) },
+    iframeSdk: { ...base.iframeSdk, ...(stored.iframeSdk ?? {}) },
+    socketSettings: { ...base.socketSettings, ...(stored.socketSettings ?? {}) },
+    iframeSettings: { ...base.iframeSettings, ...(stored.iframeSettings ?? {}) },
+  };
+}
+
 export function loadFlows(): FlowConfig[] {
   try {
     const raw = storageGet(STORAGE_KEY);
     if (raw) {
-      const flows = JSON.parse(raw) as FlowConfig[];
-      if (Array.isArray(flows) && flows.length) return flows;
+      const flows = JSON.parse(raw) as Partial<FlowConfig>[];
+      if (Array.isArray(flows) && flows.length) return flows.map(normalizeFlow);
     }
   } catch {
     // fall through to default

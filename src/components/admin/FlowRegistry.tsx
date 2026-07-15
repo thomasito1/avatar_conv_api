@@ -24,8 +24,10 @@ export default function FlowRegistry({ flows, setFlows, activeId, setActive }: P
   return (
     <section className="registry">
       <p className="hint">
-        Register each avatar flow published in Kaltura Studio: its Client ID + Flow ID, and the SDK
-        script URL / global name from the Studio embed snippet. The selected flow drives both demo panels.
+        Register each avatar flow published in Kaltura Studio by its Client ID + Flow ID — that's all
+        a flow needs to go live. The SDK scripts default to the official builds (jsDelivr, pinned
+        @2.7.4) and are only worth touching for a custom deployment. The selected flow drives both
+        demo panels.
       </p>
       {flows.map((f) => (
         <div key={f.id} className={`flow-card ${f.id === activeId ? 'selected' : ''}`}>
@@ -45,19 +47,29 @@ export default function FlowRegistry({ flows, setFlows, activeId, setActive }: P
           </div>
           <div className="flow-row">
             <label>
-              SDK script URL
+              Socket SDK script URL
               <input
-                value={f.sdkScriptUrl}
-                placeholder="https://…/avatar-sdk.js (from the Studio embed snippet)"
-                onChange={(e) => update(f.id, { sdkScriptUrl: e.target.value })}
+                value={f.socketSdk.scriptUrl}
+                onChange={(e) => update(f.id, { socketSdk: { ...f.socketSdk, scriptUrl: e.target.value } })}
+              />
+            </label>
+            <label>
+              Iframe SDK script URL
+              <input
+                value={f.iframeSdk.scriptUrl}
+                onChange={(e) => update(f.id, { iframeSdk: { ...f.iframeSdk, scriptUrl: e.target.value } })}
               />
             </label>
             <label>
               SDK global name
               <input
-                value={f.sdkGlobalName}
-                placeholder="e.g. KalturaAvatarSDK"
-                onChange={(e) => update(f.id, { sdkGlobalName: e.target.value })}
+                value={f.socketSdk.globalName}
+                onChange={(e) =>
+                  update(f.id, {
+                    socketSdk: { ...f.socketSdk, globalName: e.target.value },
+                    iframeSdk: { ...f.iframeSdk, globalName: e.target.value },
+                  })
+                }
               />
             </label>
           </div>
