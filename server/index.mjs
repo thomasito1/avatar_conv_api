@@ -207,16 +207,51 @@ app.post('/api/avatar-session/create', async (req, res) => {
     const payload = {
       clientId: 'kaltura-avatar-sdk',
       visualConfig: { id: visualId },
-      ...(voiceId ? { voiceConfig: { id: voiceId, ...(language ? { language } : {}) } } : {}),
+      ...(voiceId
+        ? { voiceConfig: { id: voiceId, modelId: 'eleven_flash_v2_5', ...(language ? { language } : {}) } }
+        : {}),
     };
-    const upstream = await avatarApi('/v1/avatar-session/create', payload);
-    const text = await upstream.text();
+    // The streaming service occasionally answers "Service temporarily
+    // unavailable"; observed transient, so retry once before giving up.
+    let upstream = await avatarApi('/v1/avatar-session/create', payload);
+    let text = await upstream.text();
+    if (!upstream.ok || text.includes('temporarily unavailable')) {
+      console.warn(`[avatar] session create -> ${upstream.status}: ${text.slice(0, 200)} — retrying once`);
+      await new Promise((r) => setTimeout(r, 2000));
+      upstream = await avatarApi('/v1/avatar-session/create', payload);
+      text = await upstream.text();
+    }
     if (!upstream.ok) {
       console.error(`[avatar] session create -> ${upstream.status}: ${text.slice(0, 300)}`);
     }
     res.status(upstream.status).type('application/json').send(text);
   } catch (err) {
     console.error('[avatar] session create failed:', err);
+    res.status(502).json({ error: 'Upstream request failed' });
+  }
+});
+
+// Safety net: end a session on the client's behalf (uses the session's own
+// Bearer token, not the KS) when the browser can't complete the SDK flow —
+// abandoned sessions count against usage.
+app.post('/api/avatar-session/end', async (req, res) => {
+  try {
+    const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    const { sessionId, token } = body ?? {};
+    if (!sessionId || !token) {
+      res.status(400).json({ error: 'sessionId and token are required' });
+      return;
+    }
+    const upstream = await avatarApi(
+      `/v1/avatar-session/${encodeURIComponent(sessionId)}/end`,
+      {},
+      `Bearer ${token}`
+    );
+    const text = await upstream.text();
+    console.log(`[avatar] session ${sessionId} end -> ${upstream.status}`);
+    res.status(upstream.status).type('application/json').send(text);
+  } catch (err) {
+    console.error('[avatar] session end failed:', err);
     res.status(502).json({ error: 'Upstream request failed' });
   }
 });

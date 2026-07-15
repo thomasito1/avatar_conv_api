@@ -65,8 +65,11 @@ exact same adapter + logging pipeline — including on-demand error simulation
 Keeps Kaltura credentials out of the browser:
 
 - `POST /api/catalog/list` → `catalog-item/list` (visuals / voices)
-- `POST /api/avatar-session/create` → `avatar-session/create` (returns
+- `POST /api/avatar-session/create` → `avatar-session/create` (retries once on
+  transient unavailability; returns
   `{ sessionId, token }` for the SDK's `initSession`)
+- `POST /api/avatar-session/end` → ends a session by its own Bearer token (the
+  safety net for sessions whose browser-side init never completed)
 - `POST /api/avatars/templates` → `avatarTemplate/list`
 - `POST /api/avatars/upsert` → `avatar/upsert`
 - `GET  /api/avatars/:id/preview` → `avatar/preview` (PNG)

@@ -97,3 +97,25 @@ export async function createAvatarSession(
   });
   return { sessionId: data.sessionId as string, token: data.token as string };
 }
+
+// Ends a session through the server proxy — the safety net for sessions that
+// were created but whose SDK init never completed in the browser.
+export async function endAvatarSessionViaProxy(creds: AvatarSessionCredentials): Promise<void> {
+  try {
+    await fetch('/api/avatar-session/end', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(creds),
+      keepalive: true,
+    });
+    logger.log({
+      level: 'info',
+      source: 'avatar-api',
+      event: 'session-ended-via-proxy',
+      message: 'Orphaned session ended through the server',
+      sessionId: creds.sessionId,
+    });
+  } catch {
+    // best effort — the server also logs failures
+  }
+}

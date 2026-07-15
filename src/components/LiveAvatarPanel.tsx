@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { KalturaAvatarSession } from '@unisphere/models-sdk-js';
-import { createAvatarSession, listCatalog, type CatalogItem } from '../api/catalog';
+import {
+  createAvatarSession,
+  endAvatarSessionViaProxy,
+  listCatalog,
+  type AvatarSessionCredentials,
+  type CatalogItem,
+} from '../api/catalog';
 import { logger } from '../logging/logger';
 import EventConsole, { type ConsoleEntry } from './EventConsole';
 
@@ -64,10 +70,12 @@ export default function LiveAvatarPanel() {
     if (!visualId || busy) return;
     setBusy(true);
     setSessionError(null);
+    let creds: AvatarSessionCredentials | null = null;
     try {
       // Backend-created session: browser never sees the KS.
-      const creds = await createAvatarSession(visualId, voiceId || undefined, 'en');
-      pushEvent('session-created', { sessionId: creds.sessionId });
+      creds = await createAvatarSession(visualId, voiceId || undefined, 'en');
+      const active = creds; // non-null capture for the event handlers below
+      pushEvent('session-created', { sessionId: active.sessionId });
 
       const session = new KalturaAvatarSession({ baseUrl: AVATAR_API_BASE });
       sessionRef.current = session;
@@ -76,7 +84,7 @@ export default function LiveAvatarPanel() {
         pushEvent('stateChange', state);
         logger.log({
           level: 'debug', source: 'avatar-api', event: 'stateChange',
-          message: String(state), sessionId: creds.sessionId,
+          message: String(state), sessionId: active.sessionId,
         });
       });
       session.on('connectionChange', (state: unknown) => {
@@ -84,7 +92,7 @@ export default function LiveAvatarPanel() {
         pushEvent('connectionChange', state);
         logger.log({
           level: 'debug', source: 'avatar-api', event: 'connectionChange',
-          message: String(state), sessionId: creds.sessionId,
+          message: String(state), sessionId: active.sessionId,
         });
       });
       session.on('speakingStart', () => {
@@ -101,18 +109,21 @@ export default function LiveAvatarPanel() {
         setSessionError(e.message ?? String(err));
         logger.log({
           level: 'error', source: 'avatar-api', event: e.code ?? 'AVATAR_ERROR',
-          message: e.message ?? String(err), sessionId: creds.sessionId, data: e,
+          message: e.message ?? String(err), sessionId: active.sessionId, data: e,
         });
       });
 
       await session.initSession(creds, { videoContainerId: VIDEO_CONTAINER_ID });
-      pushEvent('initSession-complete', { sessionId: creds.sessionId });
+      pushEvent('initSession-complete', { sessionId: active.sessionId });
       await session.sayText('Hello! Your Kaltura avatar session is live.');
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
       setSessionError(message);
       pushEvent('start-failed', { message });
       sessionRef.current = null;
+      // The session exists upstream but the SDK never took it over — end it
+      // through the server so it doesn't linger against usage.
+      if (creds) void endAvatarSessionViaProxy(creds);
     } finally {
       setBusy(false);
     }
