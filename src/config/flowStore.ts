@@ -10,6 +10,26 @@ import {
 const STORAGE_KEY = 'avatar-demo/flows';
 const ACTIVE_KEY = 'avatar-demo/active-flow';
 
+// localStorage throws in sandboxed iframes and some private-browsing modes;
+// fall back to in-memory storage so the app still runs (without persistence).
+const memory = new Map<string, string>();
+
+function storageGet(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return memory.get(key) ?? null;
+  }
+}
+
+function storageSet(key: string, value: string): void {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    memory.set(key, value);
+  }
+}
+
 const SAMPLE_DPP = JSON.stringify(
   {
     v: '2',
@@ -39,7 +59,7 @@ export function makeDefaultFlow(partial?: Partial<FlowConfig>): FlowConfig {
 
 export function loadFlows(): FlowConfig[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = storageGet(STORAGE_KEY);
     if (raw) {
       const flows = JSON.parse(raw) as FlowConfig[];
       if (Array.isArray(flows) && flows.length) return flows;
@@ -53,13 +73,13 @@ export function loadFlows(): FlowConfig[] {
 }
 
 export function saveFlows(flows: FlowConfig[]): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(flows));
+  storageSet(STORAGE_KEY, JSON.stringify(flows));
 }
 
 export function getActiveFlowId(): string | null {
-  return localStorage.getItem(ACTIVE_KEY);
+  return storageGet(ACTIVE_KEY);
 }
 
 export function setActiveFlowId(id: string): void {
-  localStorage.setItem(ACTIVE_KEY, id);
+  storageSet(ACTIVE_KEY, id);
 }

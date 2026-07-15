@@ -25,8 +25,38 @@ export interface TemplatesResult {
   live: boolean; // false when served from the built-in fallback (no KS configured)
 }
 
+// Documented template set, shown when the API proxy is unreachable (static
+// preview, sandboxed page) so the gallery still demos end-to-end.
+const FALLBACK_TEMPLATE_IDS = [
+  'adam', 'amir', 'ben', 'cristina', 'david', 'derek', 'dylan', 'elizabeth',
+  'gloria', 'harper', 'harry', 'henry', 'james', 'jane', 'jason', 'jennifer',
+  'julia', 'kevin', 'larry', 'lisa', 'maria', 'maya', 'mia', 'miguel', 'ming',
+  'rita', 'sam', 'sara', 'sharon', 'sophia', 'taylor', 'theodore', 'tim',
+  'victoria', 'william', 'yasmin',
+];
+
+function fallbackTemplates(): TemplatesResult {
+  const objects = FALLBACK_TEMPLATE_IDS.map((id) => ({
+    id,
+    name: id.charAt(0).toUpperCase() + id.slice(1),
+  }));
+  return { objects, totalCount: objects.length, live: false };
+}
+
 export async function listAvatarTemplates(): Promise<TemplatesResult> {
-  const res = await fetch('/api/avatars/templates', { method: 'POST' });
+  let res: Response;
+  try {
+    res = await fetch('/api/avatars/templates', { method: 'POST' });
+  } catch (err) {
+    logger.log({
+      level: 'warn',
+      source: 'vod-api',
+      event: 'templates-list-offline',
+      message: 'API proxy unreachable; serving documented fallback template list',
+      data: { error: String(err) },
+    });
+    return fallbackTemplates();
+  }
   if (!res.ok) {
     const detail = await res.text().catch(() => '');
     logger.log({
@@ -36,7 +66,7 @@ export async function listAvatarTemplates(): Promise<TemplatesResult> {
       message: `avatarTemplate/list proxy returned ${res.status}`,
       data: { status: res.status, detail },
     });
-    throw new Error(`Template list failed (${res.status})`);
+    return fallbackTemplates();
   }
   return res.json();
 }
